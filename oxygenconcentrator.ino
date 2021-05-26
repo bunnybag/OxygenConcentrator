@@ -1,6 +1,6 @@
 #include <LiquidCrystal_I2C.h>
 
-#define backgroundReading 148 // mV
+#define backgroundReading 150 // mV
 
 LiquidCrystal_I2C lcd(0x27,16,2);
 unsigned long time_ms;
@@ -8,6 +8,11 @@ unsigned int time_s;
 unsigned int time_min;
 unsigned int time_hr;
 char time_string[14];
+float scaleFactor;
+int sensorValue;
+float sensorVoltage;
+float adcResolution;
+float O2_level;
 
 void setup() {
   lcd.init();
@@ -19,6 +24,9 @@ void setup() {
   Serial.println("O2 Concentrator");
   lcd.setCursor(0,0);
   lcd.print("O2 Concentrator");
+
+  scaleFactor = (float) backgroundReading / 21.0;
+  adcResolution = (float) (5000.0 / 1023.0);
 }
 
 void loop() {
@@ -31,10 +39,9 @@ void loop() {
   lcd.setCursor(0,1);
   lcd.print(time_string);
 
-  static float scaleFactor = (float) backgroundReading / 21;
-  int sensorValue = analogRead(A0);
-  float sensorVoltage = sensorValue * (5000 / 1023);
-  float O2_level = sensorVoltage / scaleFactor;
+  sensorValue = analogRead(A0);
+  sensorVoltage = (float) sensorValue * adcResolution;
+  O2_level = sensorVoltage / scaleFactor;
 
   Serial.print(sensorValue);
   Serial.print("  ");
