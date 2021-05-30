@@ -1,16 +1,19 @@
 #include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 
-#define backgroundReading 146 // mV
+#define backgroundReading 12.4 // mV
 #define LCD
+#define I2C_SLAVE_LCD 0x27
+#define I2C_SLAVE_ADC 0x48
 
-LiquidCrystal_I2C lcd(0x27,16,2);
+LiquidCrystal_I2C lcd(I2C_SLAVE_LCD,16,2);
 unsigned long time_ms;
 unsigned int time_s;
 unsigned int time_min;
 unsigned int time_hr;
 char time_string[14];
 float scaleFactor;
-int sensorValue;
+int sensorValue, sensorValueL, sensorValueH;
 float sensorVoltage;
 float adcResolution;
 float O2_level;
@@ -33,7 +36,18 @@ void setup() {
   #endif
 
   scaleFactor = (float) backgroundReading / 21.0;
-  adcResolution = (float) (5000.0 / 1023.0);
+  adcResolution = (float) (256.0 / 32767.0);
+
+if(1)
+{
+  Wire.begin();
+  Wire.beginTransmission (I2C_SLAVE_ADC);
+  Wire.write(0x11);
+  Wire.write(0x0E);
+  Wire.write(0x85);
+  Wire.endTransmission();
+}
+
 }
 
 void loop() {
@@ -48,20 +62,28 @@ void loop() {
   lcd.print(time_string);
   #endif
 
-  sensorValue = analogRead(A0);
+if(1)
+{
+  delay(1000);
+  Wire.beginTransmission (I2C_SLAVE_ADC);
+  Wire.write(0x00);
+  Wire.endTransmission();
+  Wire.requestFrom(I2C_SLAVE_ADC,2);
+  sensorValueH = Wire.read();
+  sensorValueL = Wire.read();
+  sensorValue = (sensorValueH*256) + sensorValueL;
   sensorVoltage = (float) sensorValue * adcResolution;
   O2_level = sensorVoltage / scaleFactor;
+}
 
   Serial.print(sensorValue);
-  Serial.print("  ");
-  Serial.print(scaleFactor);
   Serial.print("  ");
   Serial.print(sensorVoltage);
   Serial.print("  ");
   Serial.println(O2_level);
   #ifdef LCD
+  delay(1000);
   lcd.setCursor(6,1);
-  //sprintf(O2_level_str, "%3d %f %%",int(sensorVoltage),O2_level);
   lcd.print(int(sensorVoltage));
   lcd.print(" ");
   lcd.print(String(O2_level,2));
