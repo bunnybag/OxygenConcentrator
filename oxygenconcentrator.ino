@@ -19,6 +19,17 @@ float adcResolution;
 float O2_level;
 char O2_level_str[6];
 
+int Sieve_A_Valve = 5;
+int Sieve_B_Valve = 6;
+int PreCharge_Valve = 8;
+//int Compressor = 8;
+
+unsigned long Relay_Test_Delay = 0;
+unsigned long Startup_Purge_Delay = 1000;
+unsigned long Production_Delay = 4000;
+unsigned long Flush_Delay = 450;
+unsigned long PreCharge_Delay = 700;
+
 void setup() {
   #ifdef LCD
   lcd.init();
@@ -38,20 +49,28 @@ void setup() {
   scaleFactor = (float) backgroundReading / 21.0;
   adcResolution = (float) (256.0 / 32767.0);
 
-if(1)
-{
   Wire.begin();
   Wire.beginTransmission (I2C_SLAVE_ADC);
   Wire.write(0x11);
   Wire.write(0x0E);
   Wire.write(0x85);
   Wire.endTransmission();
-}
+
+  pinMode(Sieve_A_Valve, OUTPUT);
+  pinMode(Sieve_B_Valve, OUTPUT);
+  pinMode(PreCharge_Valve, OUTPUT);
+  //pinMode(Compressor, OUTPUT);
+
+  // STARTUP PURGE
+  Serial.println("Relay Test Sequence");
+  digitalWrite(Sieve_A_Valve, HIGH); //Turn on relay
+  digitalWrite(Sieve_B_Valve, HIGH); //Turn on relay
+  digitalWrite(PreCharge_Valve, HIGH); //Turn on relay
+  delay(Startup_Purge_Delay);
 
 }
 
 void loop() {
-  delay(1000);
   time_ms = millis();
   time_s = time_ms/1000%60;
   time_min = time_ms/1000/60%60;
@@ -62,9 +81,6 @@ void loop() {
   lcd.print(time_string);
   #endif
 
-if(1)
-{
-  delay(1000);
   Wire.beginTransmission (I2C_SLAVE_ADC);
   Wire.write(0x00);
   Wire.endTransmission();
@@ -74,7 +90,6 @@ if(1)
   sensorValue = (sensorValueH*256) + sensorValueL;
   sensorVoltage = (float) sensorValue * adcResolution;
   O2_level = sensorVoltage / scaleFactor;
-}
 
   Serial.print(sensorValue);
   Serial.print("  ");
@@ -82,7 +97,6 @@ if(1)
   Serial.print("  ");
   Serial.println(O2_level);
   #ifdef LCD
-  delay(1000);
   lcd.setCursor(6,1);
   lcd.print(int(sensorVoltage));
   lcd.print(" ");
@@ -92,4 +106,56 @@ if(1)
   lcd.print(" ");
   lcd.print(" ");
   #endif
+
+  //CYCLE 1
+  //**************************************************************************
+  Serial.println("Sieve A Charge / Sieve B Purge");
+  digitalWrite(Sieve_A_Valve, HIGH);
+  digitalWrite(Sieve_B_Valve, LOW);
+  digitalWrite(PreCharge_Valve, LOW);
+  delay(Production_Delay);
+
+
+  //CYCLE 2
+  //**************************************************************************
+  Serial.println("Sieve A Charge / Sieve B Purge / Flush/PreCharge");
+  digitalWrite(Sieve_A_Valve, HIGH);
+  digitalWrite(Sieve_B_Valve, LOW);
+  digitalWrite(PreCharge_Valve, HIGH);
+  delay(Flush_Delay) ;
+
+
+  //CYCLE 3
+  //**************************************************************************
+  Serial.println("Sieve A Charge / Sieve B Charge / Flush/PreCharge");
+  digitalWrite(Sieve_A_Valve, HIGH);
+  digitalWrite(Sieve_B_Valve, HIGH);
+  digitalWrite(PreCharge_Valve, HIGH);
+  delay(PreCharge_Delay);
+
+  //CYCLE 4
+  //**************************************************************************
+  Serial.println("Sieve A Purge / Sieve B Charge");
+  digitalWrite(Sieve_A_Valve, LOW);
+  digitalWrite(Sieve_B_Valve, HIGH);
+  digitalWrite(PreCharge_Valve, LOW);
+  delay(Production_Delay);
+
+  //CYCLE 5
+  //**************************************************************************
+  Serial.println("Sieve A Purge / Sieve B Charge / Flush/PreCharge");
+  digitalWrite(Sieve_A_Valve, LOW);
+  digitalWrite(Sieve_B_Valve, HIGH);
+  digitalWrite(PreCharge_Valve, HIGH);
+  delay(Flush_Delay);
+
+
+  //CYCLE 6
+  //**************************************************************************
+  Serial.println("Sieve A Charge / Sieve B Charge / Flush/PreCharge");
+  digitalWrite(Sieve_A_Valve, HIGH);
+  digitalWrite(Sieve_B_Valve, HIGH);
+  digitalWrite(PreCharge_Valve, HIGH);
+  delay(PreCharge_Delay) ;
+  
 }
